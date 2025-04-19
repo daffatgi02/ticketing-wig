@@ -359,7 +359,7 @@
                             </form>
                         @endif
 
-                        @if ($ticket->status == 'resolved' && $ticket->user_id == Auth::id())
+                        @if (in_array($ticket->status, ['resolved', 'rejected']))
                             <form action="{{ route('tickets.update-status', $ticket) }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="status" value="closed">

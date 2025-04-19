@@ -140,7 +140,18 @@ class TicketController extends Controller
 
         $user = Auth::user();
 
-        // Check if user has permission to update status
+        // Special case: Anyone can close a resolved or rejected ticket
+        if ($request->status === 'closed' && in_array($ticket->status, ['resolved', 'rejected'])) {
+            $ticket->update([
+                'status' => 'closed',
+                'closed_at' => now()
+            ]);
+
+            return redirect()->route('tickets.show', $ticket)
+                ->with('success', 'Ticket closed successfully.');
+        }
+
+        // For other status changes, check permissions
         if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
             abort(403, 'Unauthorized action.');
         }

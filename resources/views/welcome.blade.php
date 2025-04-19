@@ -116,17 +116,13 @@
                     <a href="{{ url('/home') }}">Dashboard</a>
                 @else
                     <a href="{{ route('login') }}">Login</a>
-
-                    @if (Route::has('register'))
-                        <a href="{{ route('register') }}">Register</a>
-                    @endif
                 @endauth
             </div>
         @endif
 
         <div class="content">
             <div class="title m-b-md">
-                Company Ticketing System
+                WIG Ticketing System
             </div>
             <div class="subtitle">
                 Submit and track IT & GA support requests effortlessly
@@ -156,7 +152,7 @@
                 @auth
                     <a href="{{ url('/home') }}" class="btn">Go to Dashboard</a>
                 @else
-                    <a href="{{ route('login') }}" class="btn">Login to Get Started</a>
+                    <a href="{{ route('login') }}" class="btn">Login</a>
                 @endauth
             </div>
         </div>

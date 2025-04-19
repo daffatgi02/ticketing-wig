@@ -30,8 +30,8 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a href="{{ route('tickets.index', ['status' => Auth::user()->isSupport() ? 'assigned' : 'open']) }}" class="text-white text-decoration-none">View details</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                    <a href="{{ route('tickets.index', ['status' => Auth::user()->isSupport() ? 'assigned' : 'open']) }}" class="text-white text-decoration-none"></a>
+                    <div class="small text-white"></i></div>
                 </div>
             </div>
         </div>
@@ -48,8 +48,8 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a href="{{ route('tickets.index', ['status' => 'in_progress']) }}" class="text-white text-decoration-none">View details</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                    <a href="{{ route('tickets.index', ['status' => 'in_progress']) }}" class="text-white text-decoration-none"></a>
+                    <div class="small text-white"></i></div>
                 </div>
             </div>
         </div>
@@ -66,8 +66,8 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a href="{{ route('tickets.index', ['status' => 'resolved']) }}" class="text-white text-decoration-none">View details</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                    <a href="{{ route('tickets.index', ['status' => 'resolved']) }}" class="text-white text-decoration-none"></a>
+                    <div class="small text-white"></i></div>
                 </div>
             </div>
         </div>
