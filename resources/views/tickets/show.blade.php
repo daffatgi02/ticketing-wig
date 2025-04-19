@@ -119,7 +119,7 @@
                                     <div>
                                         <strong>{{ $comment->user->name }}</strong>
                                         @if ($comment->user->role == 'admin')
-                                            <span class="badge bg-danger ms-1">Admin</span>
+                                            <span class="badge bg-danger ms-1">HC - Admin</span>
                                         @elseif($comment->user->role == 'it_support')
                                             <span class="badge bg-primary ms-1">IT Support</span>
                                         @elseif($comment->user->role == 'ga_support')
