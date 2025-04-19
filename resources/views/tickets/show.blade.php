@@ -125,10 +125,6 @@
                                         @elseif($comment->user->role == 'ga_support')
                                             <span class="badge bg-success ms-1">GA Support</span>
                                         @endif
-
-                                        @if ($comment->is_private)
-                                            <span class="badge bg-warning ms-1">Private Note</span>
-                                        @endif
                                     </div>
                                     <small class="text-muted">{{ $comment->created_at->format('M d, Y H:i') }}</small>
                                 </div>
@@ -205,16 +201,6 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-
-                                    @if (Auth::user()->isAdmin() || Auth::user()->isSupport())
-                                        <div class="mb-3 form-check">
-                                            <input type="checkbox" class="form-check-input" id="is_private"
-                                                name="is_private" value="1"
-                                                {{ old('is_private') ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="is_private">Mark as private note (only
-                                                visible to staff)</label>
-                                        </div>
-                                    @endif
 
                                     <button type="submit" class="btn btn-primary">Submit Comment</button>
                                 </form>

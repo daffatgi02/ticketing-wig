@@ -15,7 +15,6 @@ class TicketCommentController extends Controller
     {
         $request->validate([
             'comment' => 'required|string',
-            'is_private' => 'boolean',
             'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:2048'
         ]);
 
@@ -31,12 +30,11 @@ class TicketCommentController extends Controller
             return back()->with('error', 'Only administrators can comment on closed or rejected tickets.');
         }
 
-        // Create comment
+        // Create comment (removed is_private)
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user->id,
-            'comment' => $request->comment,
-            'is_private' => $request->is_private ?? false
+            'comment' => $request->comment
         ]);
 
         // Handle file uploads

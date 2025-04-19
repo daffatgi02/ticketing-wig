@@ -13,7 +13,6 @@ return new class extends Migration
             $table->foreignId('ticket_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->text('comment');
-            $table->boolean('is_private')->default(false); // For internal notes visible only to staff
             $table->timestamps();
         });
     }
