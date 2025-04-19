@@ -15,12 +15,14 @@
                 </a>
             </li>
 
+            @if(!Auth::user()->isSupport())
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('tickets.create') ? 'active' : '' }}" href="{{ route('tickets.create') }}">
                     <i class="fas fa-plus-circle"></i>
                     {{ __('Create Ticket') }}
                 </a>
             </li>
+            @endif
 
             @if(Auth::user()->isAdmin())
                 <li class="nav-item mt-3">

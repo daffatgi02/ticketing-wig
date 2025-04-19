@@ -9,9 +9,11 @@
             <h2>Tickets</h2>
         </div>
         <div class="col-md-6 text-end">
+            @if(!Auth::user()->isSupport())
             <a href="{{ route('tickets.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus-circle"></i> Create New Ticket
             </a>
+            @endif
         </div>
     </div>
 

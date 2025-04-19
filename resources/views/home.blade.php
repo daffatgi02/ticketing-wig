@@ -17,14 +17,20 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title">Open Tickets</h6>
+                            <h6 class="card-title">
+                                @if(Auth::user()->isSupport())
+                                    Assigned Tickets
+                                @else
+                                    Open Tickets
+                                @endif
+                            </h6>
                             <h2 class="mb-0">{{ $openTickets }}</h2>
                         </div>
                         <i class="fas fa-ticket-alt fa-3x opacity-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a href="{{ route('tickets.index', ['status' => 'open']) }}" class="text-white text-decoration-none">View details</a>
+                    <a href="{{ route('tickets.index', ['status' => Auth::user()->isSupport() ? 'assigned' : 'open']) }}" class="text-white text-decoration-none">View details</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
@@ -66,6 +72,93 @@
             </div>
         </div>
     </div>
+
+    @if(Auth::user()->isAdmin())
+    <div class="row mb-4">
+        <!-- Department Statistics -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="fas fa-building me-1"></i>
+                    Top Departments by Tickets
+                </div>
+                <div class="card-body">
+                    @if(count($departmentTickets) > 0)
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Number of Tickets</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $totalTickets = array_sum($departmentTickets->pluck('count')->toArray()); @endphp
+                                    @foreach($departmentTickets as $dept)
+                                        <tr>
+                                            <td>{{ $dept->name }}</td>
+                                            <td>{{ $dept->count }}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar" role="progressbar"
+                                                        style="width: {{ ($dept->count / $totalTickets) * 100 }}%;"
+                                                        aria-valuenow="{{ ($dept->count / $totalTickets) * 100 }}"
+                                                        aria-valuemin="0"
+                                                        aria-valuemax="100">
+                                                        {{ round(($dept->count / $totalTickets) * 100, 1) }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="alert alert-info">No department data available yet.</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Ticket Reporters -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="fas fa-users me-1"></i>
+                    Top Ticket Creators
+                </div>
+                <div class="card-body">
+                    @if(count($topReporters) > 0)
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Department</th>
+                                        <th>Tickets Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($topReporters as $reporter)
+                                        <tr>
+                                            <td>{{ $reporter->name }}</td>
+                                            <td>{{ $reporter->department }}</td>
+                                            <td>{{ $reporter->count }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="alert alert-info">No ticket creation data available yet.</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="row mb-4">
         <div class="col-md-12">
@@ -129,7 +222,9 @@
                     </div>
                 </div>
                 <div class="card-footer small text-muted">
-                    <a href="{{ route('tickets.create') }}" class="btn btn-sm btn-primary">Create New Ticket</a>
+                    @if(!Auth::user()->isSupport())
+                        <a href="{{ route('tickets.create') }}" class="btn btn-sm btn-primary">Create New Ticket</a>
+                    @endif
                     <a href="{{ route('tickets.index') }}" class="btn btn-sm btn-secondary ms-2">View All Tickets</a>
                 </div>
             </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -29,6 +30,7 @@ class HomeController extends Controller
 
         // Get ticket statistics based on user role
         if ($user->isAdmin()) {
+            // Admin sees all tickets
             $openTickets = Ticket::where('status', 'open')->count();
             $inProgressTickets = Ticket::where('status', 'in_progress')->count();
             $resolvedTickets = Ticket::where('status', 'resolved')->count();
@@ -36,8 +38,38 @@ class HomeController extends Controller
                 ->latest()
                 ->take(5)
                 ->get();
+
+            // Get top departments with most tickets
+            $departmentTickets = Ticket::select('departments.name', DB::raw('count(*) as count'))
+                ->join('users', 'tickets.user_id', '=', 'users.id')
+                ->join('departments', 'users.department_id', '=', 'departments.id')
+                ->groupBy('departments.name')
+                ->orderBy('count', 'desc')
+                ->take(5)
+                ->get();
+
+            // Get top users who create most tickets
+            $topReporters = Ticket::select('users.name', 'departments.name as department', DB::raw('count(*) as count'))
+                ->join('users', 'tickets.user_id', '=', 'users.id')
+                ->join('departments', 'users.department_id', '=', 'departments.id')
+                ->groupBy('users.name', 'departments.name')
+                ->orderBy('count', 'desc')
+                ->take(5)
+                ->get();
+
+            return view('home', compact(
+                'openTickets',
+                'inProgressTickets',
+                'resolvedTickets',
+                'recentTickets',
+                'departmentTickets',
+                'topReporters'
+            ));
         } elseif ($user->isSupport()) {
-            $openTickets = Ticket::where('status', 'open')->count();
+            // Support staff only sees tickets assigned to them
+            $openTickets = Ticket::where('status', 'assigned')
+                ->where('assigned_to', $user->id)
+                ->count();
             $inProgressTickets = Ticket::where('status', 'in_progress')
                 ->where('assigned_to', $user->id)
                 ->count();
@@ -49,7 +81,15 @@ class HomeController extends Controller
                 ->latest()
                 ->take(5)
                 ->get();
+
+            return view('home', compact(
+                'openTickets',
+                'inProgressTickets',
+                'resolvedTickets',
+                'recentTickets'
+            ));
         } else {
+            // Regular users see their own tickets
             $openTickets = Ticket::where('user_id', $user->id)
                 ->whereIn('status', ['open', 'assigned', 'in_progress'])
                 ->count();
@@ -64,8 +104,13 @@ class HomeController extends Controller
                 ->latest()
                 ->take(5)
                 ->get();
-        }
 
-        return view('home', compact('openTickets', 'inProgressTickets', 'resolvedTickets', 'recentTickets'));
+            return view('home', compact(
+                'openTickets',
+                'inProgressTickets',
+                'resolvedTickets',
+                'recentTickets'
+            ));
+        }
     }
 }

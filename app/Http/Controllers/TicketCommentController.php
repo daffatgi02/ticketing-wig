@@ -26,9 +26,9 @@ class TicketCommentController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Check if ticket is closed
-        if (in_array($ticket->status, ['closed', 'rejected'])) {
-            return back()->with('error', 'Cannot comment on a closed or rejected ticket.');
+        // Check if ticket is closed - only admin can comment on closed tickets
+        if (in_array($ticket->status, ['closed', 'rejected']) && !$user->isAdmin()) {
+            return back()->with('error', 'Only administrators can comment on closed or rejected tickets.');
         }
 
         // Create comment
@@ -68,6 +68,12 @@ class TicketCommentController extends Controller
         // Check permissions to delete comment
         if (!$user->isAdmin() && $comment->user_id != $user->id) {
             abort(403, 'Unauthorized action.');
+        }
+
+        // Only admin can delete comments on closed tickets
+        if (in_array($ticket->status, ['closed']) && !$user->isAdmin()) {
+            return redirect()->route('tickets.show', $ticket)
+                ->with('error', 'Only administrators can delete comments on closed tickets.');
         }
 
         // Delete attachments

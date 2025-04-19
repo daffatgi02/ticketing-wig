@@ -12,8 +12,8 @@ class UserSeeder extends Seeder
     {
         // Create admin user
         User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
+            'name' => 'Rahadiyan Purba',
+            'email' => 'admin@gmail.com',
             'password' => Hash::make('daffa123'),
             'role' => 'admin',
             'department_id' => 1, // Human Resources
@@ -24,20 +24,20 @@ class UserSeeder extends Seeder
 
         // Create IT support user
         User::create([
-            'name' => 'IT Support',
-            'email' => 'it@example.com',
+            'name' => 'Daffa Fakhuddin Arrozy',
+            'email' => 'daffatgi02@gmail.com',
             'password' => Hash::make('daffa123'),
             'role' => 'it_support',
             'department_id' => 2, // IT
             'employee_id' => 'EMP-002',
-            'position' => 'IT Support Specialist',
+            'position' => 'IT Support',
             'phone' => '1234567891'
         ]);
 
         // Create GA support user
         User::create([
-            'name' => 'GA Support',
-            'email' => 'ga@example.com',
+            'name' => 'Agus Widardi',
+            'email' => 'it.wijayainovasigemilang@gmail.com',
             'password' => Hash::make('daffa123'),
             'role' => 'ga_support',
             'department_id' => 7, // General Affairs
@@ -48,25 +48,14 @@ class UserSeeder extends Seeder
 
         // Create regular users
         User::create([
-            'name' => 'Finance User',
-            'email' => 'finance@example.com',
+            'name' => 'Rika Nidiawati',
+            'email' => 'finance@gmail.com',
             'password' => Hash::make('daffa123'),
             'role' => 'user',
             'department_id' => 3, // Finance
             'employee_id' => 'EMP-004',
-            'position' => 'Finance Specialist',
+            'position' => 'Finance',
             'phone' => '1234567893'
-        ]);
-
-        User::create([
-            'name' => 'Operations User',
-            'email' => 'operations@example.com',
-            'password' => Hash::make('daffa123'),
-            'role' => 'user',
-            'department_id' => 4, // Operations
-            'employee_id' => 'EMP-005',
-            'position' => 'Operations Manager',
-            'phone' => '1234567894'
         ]);
     }
 }

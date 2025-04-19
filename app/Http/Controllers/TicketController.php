@@ -17,17 +17,16 @@ class TicketController extends Controller
         $user = Auth::user();
 
         if ($user->isAdmin()) {
+            // Admin sees all tickets
             $tickets = Ticket::with(['user', 'category', 'assignedTo'])->latest()->get();
         } elseif ($user->isSupport()) {
+            // Support staff can only see tickets assigned to them
             $tickets = Ticket::with(['user', 'category'])
                 ->where('assigned_to', $user->id)
-                ->orWhere(function($query) {
-                    $query->whereNull('assigned_to')
-                        ->where('status', 'open');
-                })
                 ->latest()
                 ->get();
         } else {
+            // Regular users see only their own tickets
             $tickets = Ticket::with(['category', 'assignedTo'])
                 ->where('user_id', $user->id)
                 ->latest()
@@ -36,7 +35,6 @@ class TicketController extends Controller
 
         return view('tickets.index', compact('tickets'));
     }
-
     public function create()
     {
         $categories = Category::all();
@@ -64,7 +62,7 @@ class TicketController extends Controller
             'category_id' => $request->category_id,
             'title' => $request->title,
             'description' => $request->description,
-            'status' => 'open'
+            'status' => 'open' // All new tickets start as 'open' and await admin assignment
         ]);
 
         // Handle file uploads
@@ -84,7 +82,7 @@ class TicketController extends Controller
         }
 
         return redirect()->route('tickets.show', $ticket)
-            ->with('success', 'Ticket created successfully.');
+            ->with('success', 'Ticket created successfully and awaiting review by administrator.');
     }
 
     public function show(Ticket $ticket)
@@ -145,6 +143,12 @@ class TicketController extends Controller
         // Check if user has permission to update status
         if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
             abort(403, 'Unauthorized action.');
+        }
+
+        // Only admin can update closed tickets
+        if (in_array($ticket->status, ['closed']) && !$user->isAdmin()) {
+            return redirect()->route('tickets.show', $ticket)
+                ->with('error', 'Only administrators can modify closed tickets.');
         }
 
         $data = [

@@ -31,8 +31,15 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
+    // Ticket creation routes (only for users and admins, not support)
+    Route::middleware(['role:user,admin'])->group(function () {
+        Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
+        Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
+    });
+
     // Ticket routes accessible to all authenticated users
-    Route::resource('tickets', TicketController::class);
+    Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])->name('ticket.comments.store');
     Route::delete('/comments/{comment}', [TicketCommentController::class, 'destroy'])->name('ticket.comments.destroy');
 
@@ -48,5 +55,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('categories', CategoryController::class);
         Route::resource('departments', DepartmentController::class);
         Route::post('/tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('tickets.assign');
+        Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
     });
 });

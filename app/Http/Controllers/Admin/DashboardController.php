@@ -40,11 +40,31 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
+        // Get top departments with most tickets
+        $departmentTickets = Ticket::select('departments.name', DB::raw('count(*) as count'))
+            ->join('users', 'tickets.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->groupBy('departments.name')
+            ->orderBy('count', 'desc')
+            ->take(5)
+            ->get();
+
+        // Get top users who create most tickets
+        $topReporters = Ticket::select('users.name', 'departments.name as department', DB::raw('count(*) as count'))
+            ->join('users', 'tickets.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->groupBy('users.name', 'departments.name')
+            ->orderBy('count', 'desc')
+            ->take(5)
+            ->get();
+
         return view('admin.dashboard', compact(
             'userCounts',
             'ticketCounts',
             'ticketsPerMonth',
-            'recentTickets'
+            'recentTickets',
+            'departmentTickets',
+            'topReporters'
         ));
     }
 }
