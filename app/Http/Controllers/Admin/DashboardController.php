@@ -24,6 +24,9 @@ class DashboardController extends Controller
             ->pluck('count', 'status')
             ->toArray();
 
+        // Count tickets that need external support
+        $externalSupportTickets = Ticket::where('needs_external_support', true)->count();
+
         // Get tickets created per month for the current year
         $ticketsPerMonth = Ticket::select(
             DB::raw('MONTH(created_at) as month'),
@@ -61,6 +64,7 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact(
             'userCounts',
             'ticketCounts',
+            'externalSupportTickets',
             'ticketsPerMonth',
             'recentTickets',
             'departmentTickets',

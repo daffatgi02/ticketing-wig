@@ -37,6 +37,26 @@ class DepartmentSeeder extends Seeder
             [
                 'name' => 'General Affairs',
                 'description' => 'Manages office facilities, equipment, and general support'
+            ],
+            [
+                'name' => 'Quality Control',
+                'description' => 'Ensures product quality meets standards and specifications'
+            ],
+            [
+                'name' => 'Research and Development',
+                'description' => 'Focuses on innovation and new product development'
+            ],
+            [
+                'name' => 'Regulatory',
+                'description' => 'Handles compliance with regulations and standards'
+            ],
+            [
+                'name' => 'Customer Service',
+                'description' => 'Manages customer inquiries and support'
+            ],
+            [
+                'name' => 'Management',
+                'description' => 'Company leadership and strategic direction'
             ]
         ];
 

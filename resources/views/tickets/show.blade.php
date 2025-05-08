@@ -370,6 +370,112 @@
                         @endif
                     </div>
                 </div>
+                <!-- External Support Sidebar - Visible only to Support Staff -->
+                @if (Auth::user()->isSupport() || Auth::user()->isAdmin())
+                    <div class="card mb-4 {{ $ticket->needs_external_support ? 'border-warning' : '' }}">
+                        <div class="card-header {{ $ticket->needs_external_support ? 'bg-warning text-dark' : '' }}">
+                            <i class="fas fa-tools me-1"></i>
+                            External Support
+                        </div>
+                        <div class="card-body">
+                            @if ($ticket->needs_external_support)
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    This ticket has been marked as requiring external support.
+                                </div>
+
+                                <div class="mb-3">
+                                    <strong>Reason:</strong>
+                                    <p>{{ $ticket->external_support_reason }}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <strong>Requested at:</strong>
+                                    <p>{{ $ticket->external_support_requested_at->format('M d, Y H:i') }}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <strong>Documents:</strong>
+                                    <div class="list-group mt-2">
+                                        @if ($ticket->bak_document)
+                                            <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'bak']) }}"
+                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                <span><i class="fas fa-file-alt me-2"></i> Berita Acara Kejadian
+                                                    (BAK)</span>
+                                                <span class="badge bg-primary rounded-pill"><i
+                                                        class="fas fa-download"></i></span>
+                                            </a>
+                                        @endif
+
+                                        @if ($ticket->rkb_document)
+                                            <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'rkb']) }}"
+                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                <span><i class="fas fa-file-invoice-dollar me-2"></i> Rencana Kerja dan
+                                                    Biaya (RKB)</span>
+                                                <span class="badge bg-primary rounded-pill"><i
+                                                        class="fas fa-download"></i></span>
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @else
+                                <p>If this ticket requires external vendor/contractor support, mark it here:</p>
+
+                                <form action="{{ route('tickets.external-support', $ticket) }}" method="POST">
+                                    @csrf
+
+                                    <div class="mb-3">
+                                        <label for="external_support_reason" class="form-label">Reason for External
+                                            Support</label>
+                                        <textarea class="form-control @error('external_support_reason') is-invalid @enderror" id="external_support_reason"
+                                            name="external_support_reason" rows="3" required></textarea>
+                                        @error('external_support_reason')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="document_format" class="form-label">Document Format</label>
+                                        <select class="form-select @error('document_format') is-invalid @enderror"
+                                            id="document_format" name="document_format" required>
+                                            <option value="pdf">PDF</option>
+                                            <option value="docx">Word (DOCX)</option>
+                                        </select>
+                                        @error('document_format')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-external-link-alt me-1"></i> Mark as Needing External Support
+                                        </button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Resolution Document Card - Visible when ticket is closed -->
+                @if ($ticket->status == 'closed' && $ticket->resolution_document)
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-file-pdf me-1"></i>
+                            Resolution Document
+                        </div>
+                        <div class="card-body">
+                            <p>A resolution document has been generated for this ticket.</p>
+
+                            <div class="d-grid">
+                                <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'resolution']) }}"
+                                    class="btn btn-primary">
+                                    <i class="fas fa-download me-1"></i> Download Resolution Report
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

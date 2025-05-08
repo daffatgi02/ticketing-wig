@@ -76,6 +76,20 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="card bg-warning text-dark">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="small">External Support</div>
+                                                <div class="fs-4">{{ $externalSupportTickets ?? 0 }}</div>
+                                            </div>
+                                            <i class="fas fa-tools fa-2x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="card-footer">

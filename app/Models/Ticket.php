@@ -21,15 +21,24 @@ class Ticket extends Model
         'assigned_at',
         'resolved_at',
         'closed_at',
-        'rejection_reason'
+        'rejection_reason',
+        'needs_external_support',
+        'external_support_reason',
+        'bak_document',
+        'rkb_document',
+        'resolution_document',
+        'external_support_requested_at'
     ];
 
     protected $casts = [
         'assigned_at' => 'datetime',
         'resolved_at' => 'datetime',
         'closed_at' => 'datetime',
+        'external_support_requested_at' => 'datetime',
+        'needs_external_support' => 'boolean',
     ];
 
+    // Relasi yang sudah ada
     public function user()
     {
         return $this->belongsTo(User::class);

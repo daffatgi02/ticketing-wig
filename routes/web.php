@@ -42,6 +42,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])->name('ticket.comments.store');
     Route::delete('/comments/{comment}', [TicketCommentController::class, 'destroy'])->name('ticket.comments.destroy');
+    // Routes baru untuk fitur dokumen
+    Route::post('/tickets/{ticket}/external-support', [TicketController::class, 'markNeedsExternalSupport'])
+        ->name('tickets.external-support')
+        ->middleware('role:it_support,ga_support,admin');
+
+    Route::get('/tickets/{ticket}/document/{documentType}', [TicketController::class, 'downloadDocument'])
+        ->name('tickets.document.download');
 
     // Routes for IT/GA Support and Admin
     Route::middleware(['role:it_support,ga_support,admin'])->group(function () {

@@ -34,6 +34,8 @@ class HomeController extends Controller
             $openTickets = Ticket::where('status', 'open')->count();
             $inProgressTickets = Ticket::where('status', 'in_progress')->count();
             $resolvedTickets = Ticket::where('status', 'resolved')->count();
+            $externalSupportTickets = Ticket::where('needs_external_support', true)->count();
+
             $recentTickets = Ticket::with(['user', 'category', 'assignedTo'])
                 ->latest()
                 ->take(5)
@@ -61,6 +63,7 @@ class HomeController extends Controller
                 'openTickets',
                 'inProgressTickets',
                 'resolvedTickets',
+                'externalSupportTickets',
                 'recentTickets',
                 'departmentTickets',
                 'topReporters'
@@ -76,6 +79,10 @@ class HomeController extends Controller
             $resolvedTickets = Ticket::where('status', 'resolved')
                 ->where('assigned_to', $user->id)
                 ->count();
+            $externalSupportTickets = Ticket::where('needs_external_support', true)
+                ->where('assigned_to', $user->id)
+                ->count();
+
             $recentTickets = Ticket::where('assigned_to', $user->id)
                 ->with(['user', 'category'])
                 ->latest()
@@ -86,6 +93,7 @@ class HomeController extends Controller
                 'openTickets',
                 'inProgressTickets',
                 'resolvedTickets',
+                'externalSupportTickets',
                 'recentTickets'
             ));
         } else {
@@ -99,6 +107,10 @@ class HomeController extends Controller
             $resolvedTickets = Ticket::where('user_id', $user->id)
                 ->whereIn('status', ['resolved', 'closed'])
                 ->count();
+            $externalSupportTickets = Ticket::where('user_id', $user->id)
+                ->where('needs_external_support', true)
+                ->count();
+
             $recentTickets = Ticket::where('user_id', $user->id)
                 ->with(['category', 'assignedTo'])
                 ->latest()
@@ -109,6 +121,7 @@ class HomeController extends Controller
                 'openTickets',
                 'inProgressTickets',
                 'resolvedTickets',
+                'externalSupportTickets',
                 'recentTickets'
             ));
         }
