@@ -370,6 +370,43 @@
                         @endif
                     </div>
                 </div>
+
+                <!-- Setelah card Action sidebar untuk user -->
+                @if (!Auth::user()->isSupport() && !Auth::user()->isAdmin() && $ticket->needs_external_support)
+                    <div class="card mb-4 border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <i class="fas fa-tools me-1"></i>
+                            External Support Status
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This ticket has been marked as requiring external support or vendor assistance.
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Status:</strong>
+                                <p>
+                                    Your ticket has been forwarded for external support processing. The IT/GA team has
+                                    prepared
+                                    a detailed report and is now handling the issue with the appropriate external resources.
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Last Updated:</strong>
+                                <p>{{ $ticket->external_support_requested_at ? $ticket->external_support_requested_at->format('M d, Y H:i') : $ticket->updated_at->format('M d, Y H:i') }}
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Support Notes:</strong>
+                                <p>{{ Str::limit($ticket->external_support_reason, 150) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- External Support Sidebar - Visible only to Support Staff -->
                 @if (Auth::user()->isSupport() || Auth::user()->isAdmin())
                     <div class="card mb-4 {{ $ticket->needs_external_support ? 'border-warning' : '' }}">
@@ -385,7 +422,17 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <strong>Reason:</strong>
+                                    <strong>Issue:</strong>
+                                    <p>{{ $ticket->issue_detail }}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <strong>Actions Taken:</strong>
+                                    <p>{!! nl2br(e($ticket->actions_taken)) !!}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <strong>External Support Reason:</strong>
                                     <p>{{ $ticket->external_support_reason }}</p>
                                 </div>
 
@@ -418,40 +465,23 @@
                                         @endif
                                     </div>
                                 </div>
+
+                                <div class="d-grid gap-2">
+                                    <a href="{{ route('tickets.external-support-form', $ticket) }}"
+                                        class="btn btn-warning">
+                                        <i class="fas fa-edit me-1"></i> Edit Report Details
+                                    </a>
+                                </div>
                             @else
-                                <p>If this ticket requires external vendor/contractor support, mark it here:</p>
+                                <p>If this ticket requires external vendor/contractor support or part replacement, create a
+                                    report:</p>
 
-                                <form action="{{ route('tickets.external-support', $ticket) }}" method="POST">
-                                    @csrf
-
-                                    <div class="mb-3">
-                                        <label for="external_support_reason" class="form-label">Reason for External
-                                            Support</label>
-                                        <textarea class="form-control @error('external_support_reason') is-invalid @enderror" id="external_support_reason"
-                                            name="external_support_reason" rows="3" required></textarea>
-                                        @error('external_support_reason')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="document_format" class="form-label">Document Format</label>
-                                        <select class="form-select @error('document_format') is-invalid @enderror"
-                                            id="document_format" name="document_format" required>
-                                            <option value="pdf">PDF</option>
-                                            <option value="docx">Word (DOCX)</option>
-                                        </select>
-                                        @error('document_format')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
-                                    <div class="d-grid">
-                                        <button type="submit" class="btn btn-warning">
-                                            <i class="fas fa-external-link-alt me-1"></i> Mark as Needing External Support
-                                        </button>
-                                    </div>
-                                </form>
+                                <div class="d-grid">
+                                    <a href="{{ route('tickets.external-support-form', $ticket) }}"
+                                        class="btn btn-warning">
+                                        <i class="fas fa-file-alt me-1"></i> Create External Support Report
+                                    </a>
+                                </div>
                             @endif
                         </div>
                     </div>

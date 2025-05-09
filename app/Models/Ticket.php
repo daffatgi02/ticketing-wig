@@ -27,7 +27,14 @@ class Ticket extends Model
         'bak_document',
         'rkb_document',
         'resolution_document',
-        'external_support_requested_at'
+        'external_support_requested_at',
+        'incident_date',
+        'incident_time',
+        'issue_detail',
+        'actions_taken',
+        'report_recipient',
+        'report_recipient_position',
+        'additional_notes',
     ];
 
     protected $casts = [
@@ -36,8 +43,9 @@ class Ticket extends Model
         'closed_at' => 'datetime',
         'external_support_requested_at' => 'datetime',
         'needs_external_support' => 'boolean',
+        'incident_date' => 'date',
+        'incident_time' => 'datetime',
     ];
-
     // Relasi yang sudah ada
     public function user()
     {

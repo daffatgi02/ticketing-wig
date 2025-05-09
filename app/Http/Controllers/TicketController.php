@@ -62,57 +62,57 @@ class TicketController extends Controller
     }
 
     public function markNeedsExternalSupport(Request $request, Ticket $ticket)
-{
-    $request->validate([
-        'external_support_reason' => 'required|string',
-        'document_format' => 'required|in:pdf,docx'
-    ]);
-
-    $user = Auth::user();
-
-    // Verify user is support staff assigned to this ticket or admin
-    if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
-        abort(403, 'Unauthorized action.');
-    }
-
-    // Only support staff can mark tickets as needing external support
-    if (!$user->isSupport() && !$user->isAdmin()) {
-        abort(403, 'Unauthorized action.');
-    }
-
-    try {
-        // Generate BAK and RKB documents
-        $documentGenerator = new DocumentGenerator();
-        $format = $request->document_format;
-
-        $bakPath = $documentGenerator->generateBAKDocument($ticket, $format);
-        $rkbPath = $documentGenerator->generateRKBDocument($ticket, $format);
-
-        $ticket->update([
-            'needs_external_support' => true,
-            'external_support_reason' => $request->external_support_reason,
-            'bak_document' => $bakPath,
-            'rkb_document' => $rkbPath,
-            'external_support_requested_at' => now()
+    {
+        $request->validate([
+            'external_support_reason' => 'required|string',
+            'document_format' => 'required|in:pdf,docx'
         ]);
 
-        return redirect()->route('tickets.show', $ticket)
-            ->with('success', 'Ticket marked as needing external support. BAK and RKB documents have been generated.');
-    } catch (\Exception $e) {
-        // Log error
-        \Log::error('Failed to generate support documents: ' . $e->getMessage());
+        $user = Auth::user();
 
-        // Tetap update status tiket meskipun dokumen gagal dibuat
-        $ticket->update([
-            'needs_external_support' => true,
-            'external_support_reason' => $request->external_support_reason,
-            'external_support_requested_at' => now()
-        ]);
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
 
-        return redirect()->route('tickets.show', $ticket)
-            ->with('warning', 'Ticket marked as needing external support, but failed to generate documents.');
+        // Only support staff can mark tickets as needing external support
+        if (!$user->isSupport() && !$user->isAdmin()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            // Generate BAK and RKB documents
+            $documentGenerator = new DocumentGenerator();
+            $format = $request->document_format;
+
+            $bakPath = $documentGenerator->generateBAKDocument($ticket, $format);
+            $rkbPath = $documentGenerator->generateRKBDocument($ticket, $format);
+
+            $ticket->update([
+                'needs_external_support' => true,
+                'external_support_reason' => $request->external_support_reason,
+                'bak_document' => $bakPath,
+                'rkb_document' => $rkbPath,
+                'external_support_requested_at' => now()
+            ]);
+
+            return redirect()->route('tickets.show', $ticket)
+                ->with('success', 'Ticket marked as needing external support. BAK and RKB documents have been generated.');
+        } catch (\Exception $e) {
+            // Log error
+            \Log::error('Failed to generate support documents: ' . $e->getMessage());
+
+            // Tetap update status tiket meskipun dokumen gagal dibuat
+            $ticket->update([
+                'needs_external_support' => true,
+                'external_support_reason' => $request->external_support_reason,
+                'external_support_requested_at' => now()
+            ]);
+
+            return redirect()->route('tickets.show', $ticket)
+                ->with('warning', 'Ticket marked as needing external support, but failed to generate documents.');
+        }
     }
-}
 
     // Tambahkan metode untuk download dokumen
     public function downloadDocument(Ticket $ticket, $documentType)
@@ -206,6 +206,133 @@ class TicketController extends Controller
         return redirect()->route('tickets.show', $ticket)
             ->with('success', 'Ticket created successfully and awaiting review by administrator.');
     }
+
+    // Method untuk menampilkan form external support
+    public function showExternalSupportForm(Ticket $ticket)
+    {
+        $user = Auth::user();
+
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Only support staff can access this form
+        if (!$user->isSupport() && !$user->isAdmin()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return view('tickets.external_support_form', compact('ticket'));
+    }
+
+
+    // Method untuk memproses form dan membuat dokumen
+    public function submitExternalSupport(Request $request, Ticket $ticket)
+    {
+        $request->validate([
+            'incident_date' => 'required|date',
+            'incident_time' => 'required',
+            'issue_detail' => 'required|string',
+            'actions_taken' => 'required|string',
+            'external_support_reason' => 'required|string',
+            'report_recipient' => 'required|string|max:255',
+            'report_recipient_position' => 'required|string|max:255',
+            'additional_notes' => 'nullable|string',
+            'document_format' => 'required|in:pdf,docx',
+            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:2048'
+        ]);
+
+        $user = Auth::user();
+
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Only support staff can mark tickets as needing external support
+        if (!$user->isSupport() && !$user->isAdmin()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            // Update ticket details
+            $ticket->update([
+                'incident_date' => $request->incident_date,
+                'incident_time' => $request->incident_time,
+                'issue_detail' => $request->issue_detail,
+                'actions_taken' => $request->actions_taken,
+                'external_support_reason' => $request->external_support_reason,
+                'report_recipient' => $request->report_recipient,
+                'report_recipient_position' => $request->report_recipient_position,
+                'additional_notes' => $request->additional_notes,
+                'needs_external_support' => true,
+                'external_support_requested_at' => $ticket->external_support_requested_at ?? now()
+            ]);
+
+            // Handle file uploads
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $filepath = $file->storeAs('attachments', $filename, 'public');
+
+                    TicketAttachment::create([
+                        'ticket_id' => $ticket->id,
+                        'filename' => $file->getClientOriginalName(),
+                        'filepath' => $filepath,
+                        'filetype' => $file->getClientMimeType(),
+                        'filesize' => $file->getSize()
+                    ]);
+                }
+            }
+
+            // Generate BAK and RKB documents
+            $documentGenerator = new DocumentGenerator();
+            $format = $request->document_format;
+
+            $bakPath = $documentGenerator->generateBAKDocument($ticket, $format);
+            $rkbPath = $documentGenerator->generateRKBDocument($ticket, $format);
+            // Generate BAK and RKB documents
+            $documentGenerator = new DocumentGenerator();
+            $format = $request->document_format;
+
+            $bakPath = $documentGenerator->generateBAKDocument($ticket, $format);
+            $rkbPath = $documentGenerator->generateRKBDocument($ticket, $format);
+
+            $ticket->update([
+                'bak_document' => $bakPath,
+                'rkb_document' => $rkbPath
+            ]);
+
+            // Determine message based on whether this is an update or initial creation
+            $message = $ticket->external_support_requested_at && $ticket->external_support_requested_at->lt(now()->subMinutes(5))
+                ? 'External support reports updated successfully.'
+                : 'External support reports generated successfully.';
+
+            return redirect()->route('tickets.show', $ticket)
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            // Log error
+            \Log::error('Failed to generate support documents: ' . $e->getMessage());
+
+            // Update ticket status but warn about document failure
+            $ticket->update([
+                'incident_date' => $request->incident_date,
+                'incident_time' => $request->incident_time,
+                'issue_detail' => $request->issue_detail,
+                'actions_taken' => $request->actions_taken,
+                'external_support_reason' => $request->external_support_reason,
+                'report_recipient' => $request->report_recipient,
+                'report_recipient_position' => $request->report_recipient_position,
+                'additional_notes' => $request->additional_notes,
+                'needs_external_support' => true,
+                'external_support_requested_at' => $ticket->external_support_requested_at ?? now()
+            ]);
+
+            return redirect()->route('tickets.show', $ticket)
+                ->with('warning', 'Ticket updated with external support details, but failed to generate documents. Error: ' . $e->getMessage());
+        }
+    }
+
 
     public function show(Ticket $ticket)
     {

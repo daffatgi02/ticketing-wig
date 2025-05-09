@@ -96,7 +96,7 @@ class DocumentGenerator
         $ticket->load(['user', 'category', 'assignedTo', 'comments.user', 'attachments']);
 
         if ($format == 'pdf') {
-            // Gunakan DomPDF langsung
+            // Buat PDF menggunakan DomPDF
             $dompdf = new Dompdf();
             $html = view('documents.bak', compact('ticket'))->render();
             $dompdf->loadHtml($html);
@@ -112,61 +112,117 @@ class DocumentGenerator
             return $path;
         } else {
             $phpWord = new PhpWord();
+
+            // Set default font
+            $phpWord->setDefaultFontName('Arial');
+            $phpWord->setDefaultFontSize(12);
+
+            // Add section
             $section = $phpWord->addSection();
 
-            // Add content to Word document
-            $section->addTitle('BERITA ACARA KEJADIAN (BAK)', 1);
-            $section->addTitle('Nomor: BAK/' . $ticket->ticket_id . '/' . date('Y'), 2);
-            $section->addTextBreak();
+            // Header - Title
+            $section->addText('BERITA ACARA', ['bold' => true, 'underline' => 'single'], ['alignment' => 'center']);
+            $section->addTextBreak(1);
 
-            $section->addText('Pada hari ini ' . now()->format('l') . ' tanggal ' . now()->format('d F Y') . ', yang bertanda tangan di bawah ini:');
-            $section->addTextBreak();
+            // Subject
+            $section->addText('Hal: Berita Acara Kerusakan ' . (
+                $ticket->category->name == 'Hardware Issue' ? 'Hardware' : ($ticket->category->name == 'Network Issue' ? 'Jaringan' : ($ticket->category->name == 'Software Issue' ? 'Software' : 'Perangkat'))
+            ));
+            $section->addTextBreak(1);
 
-            // Informasi petugas
-            $section->addText('Nama: ' . ($ticket->assignedTo ? $ticket->assignedTo->name : 'Belum ditugaskan'));
-            $section->addText('Jabatan: ' . ($ticket->assignedTo ? $ticket->assignedTo->position : '-'));
-            $section->addText('Departemen: ' . ($ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : '-'));
-            $section->addTextBreak();
+            // Recipient
+            $section->addText('Kepada Yth:');
+            $section->addText($ticket->report_recipient . ' - ' . $ticket->report_recipient_position);
+            $section->addText('Ditempat');
+            $section->addTextBreak(1);
 
-            $section->addText('Telah melakukan pengecekan atas laporan kerusakan/gangguan dengan detail sebagai berikut:');
-            $section->addTextBreak();
+            $section->addText('Dengan hormat,');
+            $section->addTextBreak(1);
 
-            $section->addText('ID Tiket: ' . $ticket->ticket_id);
-            $section->addText('Kategori: ' . $ticket->category->name);
-            $section->addText('Dilaporkan oleh: ' . $ticket->user->name);
-            $section->addText('Departemen: ' . ($ticket->user->department ? $ticket->user->department->name : '-'));
-            $section->addText('Tanggal Laporan: ' . $ticket->created_at->format('d F Y H:i'));
-            $section->addTextBreak();
+            // Department
+            $section->addText('Kami dari departemen ' . ($ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Staff IT') . ' melaporkan bahwa pada :');
+            $section->addTextBreak(1);
 
-            $section->addTitle('DESKRIPSI KEJADIAN/PERMASALAHAN', 3);
-            $section->addText($ticket->description);
-            $section->addTextBreak();
+            // Create a table for incident details
+            $table = $section->addTable([
+                'borderSize' => 0,
+                'cellMargin' => 80,
+            ]);
 
-            $section->addTitle('TINDAKAN YANG SUDAH DILAKUKAN', 3);
+            // Date
+            $table->addRow();
+            $table->addCell(3000)->addText('Hari / Tanggal');
+            $table->addCell(300)->addText(':');
+            $table->addCell(6000)->addText(\Carbon\Carbon::parse($ticket->incident_date)->isoFormat('dddd, D MMMM YYYY'));
 
-            // Get comments from support staff
-            $supportComments = $ticket->comments->where('user_id', $ticket->assigned_to);
+            // Time
+            $table->addRow();
+            $table->addCell(3000)->addText('Pukul');
+            $table->addCell(300)->addText(':');
+            $table->addCell(6000)->addText(\Carbon\Carbon::parse($ticket->incident_time)->format('H:i') . ' WIB');
 
-            if ($supportComments->count() > 0) {
-                foreach ($supportComments as $comment) {
-                    $section->addText('- ' . $comment->comment);
-                }
-            } else {
-                $section->addText('Belum ada tindakan yang dilakukan.');
+            // Issue
+            $table->addRow();
+            $table->addCell(3000)->addText('Masalah');
+            $table->addCell(300)->addText(':');
+            $table->addCell(6000)->addText($ticket->issue_detail);
+
+            // Actions
+            $table->addRow();
+            $table->addCell(3000)->addText('Tindakan');
+            $table->addCell(300)->addText(':');
+            $cell = $table->addCell(6000);
+
+            // Split actions by new line and add them individually
+            $actions = explode("\n", $ticket->actions_taken);
+            foreach ($actions as $action) {
+                $cell->addText(trim($action));
             }
 
-            $section->addTextBreak();
+            $section->addTextBreak(3);
 
-            $section->addTitle('KESIMPULAN', 3);
-            $section->addText('Berdasarkan pengecekan yang dilakukan, permasalahan ini memerlukan dukungan dari pihak eksternal dengan alasan sebagai berikut:');
-            $section->addText($ticket->external_support_reason ?: 'Belum ada alasan yang dicatat.');
-
+            // Closing
+            $section->addText('Demikian berita acara ini kami buat untuk menjadi periksa adanya.');
             $section->addTextBreak(2);
 
             // Signature section
-            $section->addText('Yang membuat berita acara,');
-            $section->addTextBreak(3);
-            $section->addText(($ticket->assignedTo ? $ticket->assignedTo->name : '___________________'));
+            $section->addText(($ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Sleman') . ', ' . now()->isoFormat('D MMMM YYYY'));
+            $section->addTextBreak(1);
+
+            // Create a table for signatures
+            $sigTable = $section->addTable([
+                'borderSize' => 0,
+                'cellMargin' => 80,
+            ]);
+
+            $sigTable->addRow();
+            $sigTable->addCell(4000)->addText('Dibuat oleh,');
+            $sigTable->addCell(4000)->addText('Diketahui oleh,');
+
+            // Empty space for signatures
+            $sigTable->addRow(1500); // Height for signature
+            $sigTable->addCell(4000);
+            $sigTable->addCell(4000);
+
+            $sigTable->addRow();
+            $sigTable->addCell(4000)->addText(($ticket->assignedTo ? $ticket->assignedTo->name : '_______________'));
+            $sigTable->addCell(4000)->addText('________________');
+
+            // Add a page break for attachments
+            $section->addPageBreak();
+
+            // Attachments page
+            $section->addText('LAMPIRAN', ['bold' => true], ['alignment' => 'center']);
+            $section->addText('Berita Acara Kejadian: ' . $ticket->ticket_id, null, ['alignment' => 'center']);
+            $section->addTextBreak(1);
+
+            $section->addText('Foto dan bukti pendukung:');
+            $section->addTextBreak(1);
+
+            $section->addText('[Bagian ini akan diisi dengan foto-foto dokumentasi setelah diekspor]', ['italic' => true], ['alignment' => 'center']);
+            $section->addTextBreak(2);
+
+            $section->addText('[Footer Logo Perusahaan]', ['italic' => true], ['alignment' => 'center']);
 
             $filename = 'BAK_' . $ticket->ticket_id . '_' . time() . '.docx';
             $path = 'documents/' . $filename;
@@ -190,7 +246,7 @@ class DocumentGenerator
         $ticket->load(['user', 'category', 'assignedTo', 'comments.user', 'attachments']);
 
         if ($format == 'pdf') {
-            // Gunakan DomPDF langsung
+            // Buat PDF menggunakan DomPDF
             $dompdf = new Dompdf();
             $html = view('documents.rkb', compact('ticket'))->render();
             $dompdf->loadHtml($html);
@@ -206,80 +262,189 @@ class DocumentGenerator
             return $path;
         } else {
             $phpWord = new PhpWord();
+
+            // Set default font
+            $phpWord->setDefaultFontName('Arial');
+            $phpWord->setDefaultFontSize(12);
+
+            // Add section
             $section = $phpWord->addSection();
 
-            // Add content to Word document
-            $section->addTitle('RENCANA KERJA DAN BIAYA (RKB)', 1);
-            $section->addTitle('Nomor: RKB/' . $ticket->ticket_id . '/' . date('Y'), 2);
-            $section->addTextBreak();
+            // Header - Title
+            $section->addText('RENCANA KERJA DAN BIAYA (RKB)', ['bold' => true, 'underline' => 'single'], ['alignment' => 'center']);
+            $section->addText('Nomor: RKB/' . $ticket->ticket_id . '/' . date('Y'), null, ['alignment' => 'center']);
+            $section->addTextBreak(1);
 
-            $section->addText('ID Tiket: ' . $ticket->ticket_id);
-            $section->addText('Kategori Permasalahan: ' . $ticket->category->name);
-            $section->addText('Tanggal Pengajuan: ' . now()->format('d F Y'));
-            $section->addTextBreak();
+            // Info table
+            $infoTable = $section->addTable(['borderSize' => 0, 'cellMargin' => 80]);
 
-            // Informasi Pelapor & Petugas
-            $section->addTitle('INFORMASI PELAPOR', 3);
-            $section->addText('Nama: ' . $ticket->user->name);
-            $section->addText('Departemen: ' . ($ticket->user->department ? $ticket->user->department->name : '-'));
-            $section->addText('Tanggal Laporan: ' . $ticket->created_at->format('d F Y H:i'));
+            // Ticket ID
+            $infoTable->addRow();
+            $infoTable->addCell(2000)->addText('ID Tiket');
+            $infoTable->addCell(300)->addText(':');
+            $infoTable->addCell(6000)->addText($ticket->ticket_id);
 
-            $section->addTextBreak();
+            // Date
+            $infoTable->addRow();
+            $infoTable->addCell(2000)->addText('Tanggal');
+            $infoTable->addCell(300)->addText(':');
+            $infoTable->addCell(6000)->addText(now()->isoFormat('D MMMM YYYY'));
 
-            $section->addTitle('INFORMASI PETUGAS', 3);
-            $section->addText('Nama: ' . ($ticket->assignedTo ? $ticket->assignedTo->name : 'Belum ditugaskan'));
-            $section->addText('Departemen: ' . ($ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : '-'));
+            // Category
+            $infoTable->addRow();
+            $infoTable->addCell(2000)->addText('Kategori');
+            $infoTable->addCell(300)->addText(':');
+            $infoTable->addCell(6000)->addText($ticket->category->name);
 
-            $section->addTextBreak();
+            $section->addTextBreak(1);
 
-            $section->addTitle('DESKRIPSI PERMASALAHAN', 3);
-            $section->addText($ticket->description);
+            // Reporter Information
+            $section->addText('1. INFORMASI PELAPOR', ['bold' => true]);
 
-            $section->addTextBreak();
+            $reporterTable = $section->addTable(['borderSize' => 0, 'cellMargin' => 80]);
 
-            $section->addTitle('REKOMENDASI SOLUSI', 3);
-            // Get the latest support comment
-            $lastSupportComment = $ticket->comments->where('user_id', $ticket->assigned_to)->last();
-            if ($lastSupportComment) {
-                $section->addText($lastSupportComment->comment);
-            } else {
-                $section->addText('Belum ada rekomendasi yang diberikan.');
+            $reporterTable->addRow();
+            $reporterTable->addCell(2000)->addText('Nama');
+            $reporterTable->addCell(300)->addText(':');
+            $reporterTable->addCell(6000)->addText($ticket->user->name);
+
+            $reporterTable->addRow();
+            $reporterTable->addCell(2000)->addText('Departemen');
+            $reporterTable->addCell(300)->addText(':');
+            $reporterTable->addCell(6000)->addText($ticket->user->department ? $ticket->user->department->name : '-');
+
+            $reporterTable->addRow();
+            $reporterTable->addCell(2000)->addText('Tanggal Laporan');
+            $reporterTable->addCell(300)->addText(':');
+            $reporterTable->addCell(6000)->addText($ticket->created_at->isoFormat('D MMMM YYYY, HH:mm'));
+
+            $section->addTextBreak(1);
+
+            // Support Staff Information
+            $section->addText('2. INFORMASI PETUGAS', ['bold' => true]);
+
+            $staffTable = $section->addTable(['borderSize' => 0, 'cellMargin' => 80]);
+
+            $staffTable->addRow();
+            $staffTable->addCell(2000)->addText('Nama');
+            $staffTable->addCell(300)->addText(':');
+            $staffTable->addCell(6000)->addText($ticket->assignedTo ? $ticket->assignedTo->name : 'Belum ditugaskan');
+
+            $staffTable->addRow();
+            $staffTable->addCell(2000)->addText('Departemen');
+            $staffTable->addCell(300)->addText(':');
+            $staffTable->addCell(6000)->addText($ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : '-');
+
+            $section->addTextBreak(1);
+
+            // Issue Description
+            $section->addText('3. DESKRIPSI PERMASALAHAN', ['bold' => true]);
+            $section->addText($ticket->issue_detail);
+            $section->addTextBreak(1);
+
+            // Actions Taken
+            $section->addText('4. TINDAKAN YANG TELAH DILAKUKAN', ['bold' => true]);
+
+            // Split actions by new line and add them individually
+            $actions = explode("\n", $ticket->actions_taken);
+            foreach ($actions as $action) {
+                if (trim($action) != '') {
+                    $section->addText(trim($action));
+                }
             }
+            $section->addTextBreak(1);
 
-            $section->addTextBreak();
+            // Recommended Solution
+            $section->addText('5. REKOMENDASI SOLUSI', ['bold' => true]);
+            $section->addText($ticket->external_support_reason);
+            $section->addTextBreak(1);
 
-            $section->addTitle('ESTIMASI KEBUTUHAN', 3);
-            $section->addText('(Detail kebutuhan barang/jasa yang diperlukan akan diisi manual setelah dokumen diekspor)');
+            // Requirements Estimation
+            $section->addText('6. ESTIMASI KEBUTUHAN', ['bold' => true]);
 
-            $section->addTextBreak();
-
-            $section->addTitle('PERSETUJUAN', 3);
-            $tableStyle = array(
+            // Requirements table
+            $reqTableStyle = [
                 'borderSize' => 6,
                 'borderColor' => '000000',
                 'cellMargin' => 80,
-                'alignment' => \PhpOffice\PhpWord\SimpleType\JcTable::CENTER,
-            );
+            ];
 
-            $table = $section->addTable($tableStyle);
+            $reqTable = $section->addTable($reqTableStyle);
 
             // Header row
-            $table->addRow();
-            $table->addCell(3000)->addText('Dibuat oleh', array('bold' => true));
-            $table->addCell(3000)->addText('Mengetahui', array('bold' => true));
-            $table->addCell(3000)->addText('Menyetujui', array('bold' => true));
+            $reqTable->addRow();
+            $reqTable->addCell(500, ['bgColor' => 'f5f5f5'])->addText('No', ['bold' => true], ['alignment' => 'center']);
+            $reqTable->addCell(4000, ['bgColor' => 'f5f5f5'])->addText('Deskripsi', ['bold' => true], ['alignment' => 'center']);
+            $reqTable->addCell(1000, ['bgColor' => 'f5f5f5'])->addText('Jumlah', ['bold' => true], ['alignment' => 'center']);
+            $reqTable->addCell(2000, ['bgColor' => 'f5f5f5'])->addText('Harga Satuan (Rp)', ['bold' => true], ['alignment' => 'center']);
+            $reqTable->addCell(2000, ['bgColor' => 'f5f5f5'])->addText('Total (Rp)', ['bold' => true], ['alignment' => 'center']);
 
-            // Content row
-            $table->addRow(1000);
-            $table->addCell(3000)->addText('');
-            $table->addCell(3000)->addText('');
-            $table->addCell(3000)->addText('');
+            // Empty rows for manual filling
+            for ($i = 1; $i <= 3; $i++) {
+                $reqTable->addRow();
+                $reqTable->addCell(500)->addText($i, null, ['alignment' => 'center']);
+                $reqTable->addCell(4000)->addText('');
+                $reqTable->addCell(1000)->addText('', null, ['alignment' => 'center']);
+                $reqTable->addCell(2000)->addText('', null, ['alignment' => 'right']);
+                $reqTable->addCell(2000)->addText('', null, ['alignment' => 'right']);
+            }
 
-            // Footer row
-            $table->addRow();
-            $table->addCell(3000)->addText($ticket->assignedTo ? $ticket->assignedTo->name : '_________________');
-            $table->addCell(3000)->addText('_________________');
-            $table->addCell(3000)->addText('_________________');
+            // Total row
+            $reqTable->addRow();
+            $cell = $reqTable->addCell(7500, ['gridSpan' => 4]);
+            $cell->addText('TOTAL', ['bold' => true], ['alignment' => 'right']);
+            $reqTable->addCell(2000)->addText('', ['bold' => true], ['alignment' => 'right']);
+
+            $section->addText('(Detail kebutuhan barang/jasa yang diperlukan akan diisi manual setelah dokumen diekspor)', ['italic' => true]);
+            $section->addTextBreak(1);
+
+            // Additional Notes
+            if ($ticket->additional_notes) {
+                $section->addText('7. CATATAN TAMBAHAN', ['bold' => true]);
+                $section->addText($ticket->additional_notes);
+                $section->addTextBreak(1);
+            }
+
+            // Approval
+            $section->addText(($ticket->additional_notes ? '8' : '7') . '. PERSETUJUAN', ['bold' => true]);
+
+            // Approval table
+            $approvalTableStyle = [
+                'borderSize' => 6,
+                'borderColor' => '000000',
+                'cellMargin' => 80,
+            ];
+
+            $approvalTable = $section->addTable($approvalTableStyle);
+
+            // Header row
+            $approvalTable->addRow();
+            $approvalTable->addCell(3000, ['bgColor' => 'f5f5f5'])->addText('Dibuat oleh', ['bold' => true], ['alignment' => 'center']);
+            $approvalTable->addCell(3000, ['bgColor' => 'f5f5f5'])->addText('Mengetahui', ['bold' => true], ['alignment' => 'center']);
+            $approvalTable->addCell(3000, ['bgColor' => 'f5f5f5'])->addText('Menyetujui', ['bold' => true], ['alignment' => 'center']);
+
+            // Empty space for signatures
+            $approvalTable->addRow(1500);
+            $approvalTable->addCell(3000);
+            $approvalTable->addCell(3000);
+            $approvalTable->addCell(3000);
+
+            // Names
+            $approvalTable->addRow();
+            $approvalTable->addCell(3000)->addText($ticket->assignedTo ? $ticket->assignedTo->name : '_______________', null, ['alignment' => 'center']);
+            $approvalTable->addCell(3000)->addText('_______________', null, ['alignment' => 'center']);
+            $approvalTable->addCell(3000)->addText('_______________', null, ['alignment' => 'center']);
+
+            // Departments
+            $approvalTable->addRow();
+            $approvalTable->addCell(3000)->addText($ticket->assignedTo ? ($ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Staff IT') : 'Staff IT', null, ['alignment' => 'center']);
+            $approvalTable->addCell(3000)->addText('Dept. ' . $ticket->report_recipient_position, null, ['alignment' => 'center']);
+            $approvalTable->addCell(3000)->addText('Dept. Finance', null, ['alignment' => 'center']);
+
+            $section->addTextBreak(2);
+
+            // Footer
+            $section->addText('[Footer Logo Perusahaan]', ['italic' => true], ['alignment' => 'center']);
 
             $filename = 'RKB_' . $ticket->ticket_id . '_' . time() . '.docx';
             $path = 'documents/' . $filename;

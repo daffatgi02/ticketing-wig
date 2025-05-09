@@ -53,6 +53,11 @@ Route::middleware(['auth'])->group(function () {
     // Routes for IT/GA Support and Admin
     Route::middleware(['role:it_support,ga_support,admin'])->group(function () {
         Route::post('/tickets/{ticket}/update-status', [TicketController::class, 'updateStatus'])->name('tickets.update-status');
+        // Routes baru untuk external support
+        Route::get('/tickets/{ticket}/external-support-form', [TicketController::class, 'showExternalSupportForm'])
+            ->name('tickets.external-support-form');
+        Route::post('/tickets/{ticket}/submit-external-support', [TicketController::class, 'submitExternalSupport'])
+            ->name('tickets.submit-external-support');
     });
 
     // Admin only routes

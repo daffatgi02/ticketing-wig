@@ -3,154 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berita Acara Kejadian (BAK)</title>
+    <title>Berita Acara Kejadian</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 30px;
+            margin: 40px;
             line-height: 1.6;
+            font-size: 12pt;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
         }
         .header h1 {
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .header h2 {
-            font-size: 16px;
-            color: #666;
+            font-size: 16pt;
+            text-decoration: underline;
+            font-weight: bold;
         }
         .content {
             text-align: justify;
         }
-        .section {
+        .subject {
             margin-bottom: 20px;
-        }
-        .section h3 {
-            background-color: #f5f5f5;
-            padding: 5px 10px;
-            border-left: 4px solid #0066cc;
-        }
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        .info-table td {
-            padding: 5px;
-        }
-        .info-table td:first-child {
-            font-weight: bold;
-            width: 180px;
         }
         .footer {
             margin-top: 80px;
         }
-        .signature {
-            width: 50%;
-            text-align: center;
-            float: right;
+        .signature-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
         }
-        .clear {
-            clear: both;
+        .signature {
+            width: 45%;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            margin-top: 50px;
+            margin-bottom: 5px;
+        }
+        table.info-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        table.info-table td:first-child {
+            width: 200px;
+            vertical-align: top;
+            padding-bottom: 10px;
+        }
+        table.info-table td:nth-child(2) {
+            width: 20px;
+            vertical-align: top;
+            padding-bottom: 10px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        @page {
+            margin-bottom: 200px;
+        }
+        .page-break {
+            page-break-after: always;
+        }
+        .attachments-header {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>BERITA ACARA KEJADIAN (BAK)</h1>
-        <h2>Nomor: BAK/{{ $ticket->ticket_id }}/{{ date('Y') }}</h2>
+        <h1>BERITA ACARA</h1>
     </div>
 
     <div class="content">
-        <p>
-            Pada hari ini {{ now()->format('l') }} tanggal {{ now()->format('d F Y') }}, yang bertanda tangan di bawah ini:
-        </p>
+        <div class="subject">
+            <p>Hal: Berita Acara Kerusakan {{
+                $ticket->category->name == 'Hardware Issue' ? 'Hardware' :
+                ($ticket->category->name == 'Network Issue' ? 'Jaringan' :
+                ($ticket->category->name == 'Software Issue' ? 'Software' : 'Perangkat'))
+            }}</p>
 
-        <table class="info-table">
-            <tr>
-                <td>Nama</td>
-                <td>: {{ $ticket->assignedTo ? $ticket->assignedTo->name : 'Belum ditugaskan' }}</td>
-            </tr>
-            <tr>
-                <td>Jabatan</td>
-                <td>: {{ $ticket->assignedTo ? $ticket->assignedTo->position : '-' }}</td>
-            </tr>
-            <tr>
-                <td>Departemen</td>
-                <td>: {{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : '-' }}</td>
-            </tr>
-        </table>
+            <p>Kepada Yth:<br>
+            {{ $ticket->report_recipient }} - {{ $ticket->report_recipient_position }}<br>
+            Ditempat</p>
 
-        <p>
-            Telah melakukan pengecekan atas laporan kerusakan/gangguan dengan detail sebagai berikut:
-        </p>
+            <p>Dengan hormat,</p>
 
-        <table class="info-table">
-            <tr>
-                <td>ID Tiket</td>
-                <td>: {{ $ticket->ticket_id }}</td>
-            </tr>
-            <tr>
-                <td>Kategori</td>
-                <td>: {{ $ticket->category->name }}</td>
-            </tr>
-            <tr>
-                <td>Dilaporkan oleh</td>
-                <td>: {{ $ticket->user->name }}</td>
-            </tr>
-            <tr>
-                <td>Departemen</td>
-                <td>: {{ $ticket->user->department ? $ticket->user->department->name : '-' }}</td>
-            </tr>
-            <tr>
-                <td>Tanggal Laporan</td>
-                <td>: {{ $ticket->created_at->format('d F Y H:i') }}</td>
-            </tr>
-        </table>
+            <p>Kami dari departemen {{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Staff IT' }} melaporkan bahwa pada :</p>
 
-        <div class="section">
-            <h3>DESKRIPSI KEJADIAN/PERMASALAHAN</h3>
-            <p>{{ $ticket->description }}</p>
-        </div>
+            <table class="info-table">
+                <tr>
+                    <td>Hari / Tanggal</td>
+                    <td>:</td>
+                    <td>{{ \Carbon\Carbon::parse($ticket->incident_date)->isoFormat('dddd, D MMMM YYYY') }}</td>
+                </tr>
+                <tr>
+                    <td>Pukul</td>
+                    <td>:</td>
+                    <td>{{ \Carbon\Carbon::parse($ticket->incident_time)->format('H:i') }} WIB</td>
+                </tr>
+                <tr>
+                    <td>Masalah</td>
+                    <td>:</td>
+                    <td>{{ $ticket->issue_detail }}</td>
+                </tr>
+                <tr>
+                    <td>Tindakan</td>
+                    <td>:</td>
+                    <td>{!! nl2br(e($ticket->actions_taken)) !!}</td>
+                </tr>
+            </table>
 
-        <div class="section">
-            <h3>TINDAKAN YANG SUDAH DILAKUKAN</h3>
-            @php
-                $supportComments = $ticket->comments->where('user_id', $ticket->assigned_to);
-            @endphp
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
 
-            @if($supportComments->count() > 0)
-                <ul>
-                    @foreach($supportComments as $comment)
-                        <li>{{ $comment->comment }}</li>
-                    @endforeach
-                </ul>
-            @else
-                <p>Belum ada tindakan yang dilakukan.</p>
-            @endif
-        </div>
-
-        <div class="section">
-            <h3>KESIMPULAN</h3>
-            <p>
-                Berdasarkan pengecekan yang dilakukan, permasalahan ini memerlukan dukungan dari pihak eksternal dengan alasan sebagai berikut:
-            </p>
-            <p>{{ $ticket->external_support_reason ?: 'Belum ada alasan yang dicatat.' }}</p>
+            <p>Demikian berita acara ini kami buat untuk menjadi periksa adanya.</p>
         </div>
 
         <div class="footer">
-            <div class="signature">
-                <p>Yang membuat berita acara,</p>
-                <br><br><br><br>
-                <p>{{ $ticket->assignedTo ? $ticket->assignedTo->name : '___________________' }}</p>
+            <p>{{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Sleman' }}, {{ now()->isoFormat('D MMMM YYYY') }}</p>
+
+            <div class="signature-container">
+                <div class="signature">
+                    <p>Dibuat oleh,</p>
+                    <div class="signature-line"></div>
+                    <p>{{ $ticket->assignedTo ? $ticket->assignedTo->name : '_______________' }}</p>
+                </div>
+
+                <div class="signature">
+                    <p>Diketahui oleh,</p>
+                    <div class="signature-line"></div>
+                    <p>________________</p>
+                </div>
             </div>
-            <div class="clear"></div>
         </div>
+    </div>
+
+    <!-- Page break for attachments -->
+    <div class="page-break"></div>
+
+    <div class="attachments-header">
+        <h2>LAMPIRAN</h2>
+        <p>Berita Acara Kejadian: {{ $ticket->ticket_id }}</p>
+    </div>
+
+    <div class="attachments-content">
+        <p>Foto dan bukti pendukung:</p>
+
+        <div style="margin-top: 20px; font-style: italic; color: #666; text-align: center;">
+            [Bagian ini akan diisi dengan foto-foto dokumentasi setelah diekspor]
+        </div>
+    </div>
+
+    <div class="logo">
+        [Footer Logo Perusahaan]
     </div>
 </body>
 </html>
