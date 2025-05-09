@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\DocTemplateController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketCommentController;
@@ -58,6 +59,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('tickets.external-support-form');
         Route::post('/tickets/{ticket}/submit-external-support', [TicketController::class, 'submitExternalSupport'])
             ->name('tickets.submit-external-support');
+        // Routes for document editor
+        Route::get('/tickets/{ticket}/editor/{type}', [TicketController::class, 'documentEditor'])->name('tickets.document.editor');
+        Route::post('/tickets/{ticket}/save-document', [TicketController::class, 'saveDocument'])->name('tickets.document.save');
+        Route::post('/tickets/{ticket}/publish-document', [TicketController::class, 'publishDocument'])->name('tickets.document.publish');
     });
 
     // Admin only routes
@@ -68,5 +73,10 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('departments', DepartmentController::class);
         Route::post('/tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('tickets.assign');
         Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
+        // Document Template routes
+        Route::resource('templates', DocTemplateController::class);
+        Route::get('templates/{template}/editor', [DocTemplateController::class, 'editor'])->name('templates.editor');
+        Route::get('templates/create/{type}', [DocTemplateController::class, 'createWithType'])->name('templates.create.type');
+        Route::post('templates/preview', [DocTemplateController::class, 'preview'])->name('templates.preview');
     });
 });

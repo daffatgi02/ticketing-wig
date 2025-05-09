@@ -445,23 +445,39 @@
                                     <strong>Documents:</strong>
                                     <div class="list-group mt-2">
                                         @if ($ticket->bak_document)
-                                            <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'bak']) }}"
+                                            <div
                                                 class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                                 <span><i class="fas fa-file-alt me-2"></i> Berita Acara Kejadian
                                                     (BAK)</span>
-                                                <span class="badge bg-primary rounded-pill"><i
-                                                        class="fas fa-download"></i></span>
-                                            </a>
+                                                <div>
+                                                    <a href="{{ route('tickets.document.editor', ['ticket' => $ticket, 'type' => 'bak']) }}"
+                                                        class="btn btn-sm btn-primary me-1">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+                                                    <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'bak']) }}"
+                                                        class="btn btn-sm btn-success">
+                                                        <i class="fas fa-download"></i> Download
+                                                    </a>
+                                                </div>
+                                            </div>
                                         @endif
 
                                         @if ($ticket->rkb_document)
-                                            <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'rkb']) }}"
+                                            <div
                                                 class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                                 <span><i class="fas fa-file-invoice-dollar me-2"></i> Rencana Kerja dan
                                                     Biaya (RKB)</span>
-                                                <span class="badge bg-primary rounded-pill"><i
-                                                        class="fas fa-download"></i></span>
-                                            </a>
+                                                <div>
+                                                    <a href="{{ route('tickets.document.editor', ['ticket' => $ticket, 'type' => 'rkb']) }}"
+                                                        class="btn btn-sm btn-primary me-1">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+                                                    <a href="{{ route('tickets.document.download', ['ticket' => $ticket, 'documentType' => 'rkb']) }}"
+                                                        class="btn btn-sm btn-success">
+                                                        <i class="fas fa-download"></i> Download
+                                                    </a>
+                                                </div>
+                                            </div>
                                         @endif
                                     </div>
                                 </div>

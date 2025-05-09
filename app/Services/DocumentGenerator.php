@@ -96,8 +96,12 @@ class DocumentGenerator
         $ticket->load(['user', 'category', 'assignedTo', 'comments.user', 'attachments']);
 
         if ($format == 'pdf') {
-            // Buat PDF menggunakan DomPDF
+            // Buat PDF menggunakan DomPDF dengan gambar
             $dompdf = new Dompdf();
+            $options = $dompdf->getOptions();
+            $options->set('isRemoteEnabled', true); // Penting untuk load gambar
+            $dompdf->setOptions($options);
+
             $html = view('documents.bak', compact('ticket'))->render();
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', 'portrait');
@@ -219,9 +223,36 @@ class DocumentGenerator
             $section->addText('Foto dan bukti pendukung:');
             $section->addTextBreak(1);
 
-            $section->addText('[Bagian ini akan diisi dengan foto-foto dokumentasi setelah diekspor]', ['italic' => true], ['alignment' => 'center']);
-            $section->addTextBreak(2);
+            // Add report images if any
+            $reportImages = $ticket->attachments->where('use_in_report', true)->sortBy('report_order');
 
+            if ($reportImages->count() > 0) {
+                foreach ($reportImages as $image) {
+                    if ($image->isImage()) {
+                        // Get image path
+                        $imagePath = storage_path('app/public/' . $image->filepath);
+
+                        // Check if file exists
+                        if (file_exists($imagePath)) {
+                            // Add caption
+                            $section->addText('Lampiran: ' . $image->filename, ['italic' => true]);
+
+                            // Add image
+                            $section->addImage($imagePath, [
+                                'width' => 400,
+                                'height' => 300,
+                                'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER
+                            ]);
+
+                            $section->addTextBreak(1);
+                        }
+                    }
+                }
+            } else {
+                $section->addText('[Tidak ada foto yang dilampirkan]', ['italic' => true], ['alignment' => 'center']);
+            }
+
+            $section->addTextBreak(1);
             $section->addText('[Footer Logo Perusahaan]', ['italic' => true], ['alignment' => 'center']);
 
             $filename = 'BAK_' . $ticket->ticket_id . '_' . time() . '.docx';
@@ -233,6 +264,120 @@ class DocumentGenerator
             return $path;
         }
     }
+
+
+    public function generateCustomBAKDocument(Ticket $ticket, $htmlContent, $format = 'pdf')
+    {
+        $ticket->load(['user', 'category', 'assignedTo', 'attachments' => function ($query) {
+            $query->where('use_in_report', true)->orderBy('report_order');
+        }]);
+
+        // Replace image URLs with actual paths for PDF
+        if ($format == 'pdf') {
+            // Find all image tags with src attribute containing storage/attachments
+            preg_match_all('/<img.*?src="(.*?storage\/attachments\/.*?)".*?>/i', $htmlContent, $matches);
+
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $imageUrl) {
+                    // Convert URL to public path
+                    $relativePath = str_replace(url('storage'), '', $imageUrl);
+                    $publicPath = public_path('storage' . $relativePath);
+
+                    // Replace with public path
+                    $htmlContent = str_replace($imageUrl, $publicPath, $htmlContent);
+                }
+            }
+        }
+
+        if ($format == 'pdf') {
+            // Buat PDF menggunakan DomPDF dengan konten custom
+            $dompdf = new Dompdf();
+            $options = $dompdf->getOptions();
+            $options->set('isRemoteEnabled', true); // Penting untuk load gambar
+            $dompdf->setOptions($options);
+
+            $dompdf->loadHtml($htmlContent);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $output = $dompdf->output();
+            $filename = 'BAK_' . $ticket->ticket_id . '_' . time() . '.pdf';
+            $path = 'documents/' . $filename;
+
+            Storage::put('public/' . $path, $output);
+
+            return $path;
+        } else {
+            // Gunakan HTML-to-DOCX conversion
+            $phpWord = new PhpWord();
+
+            // Convert HTML to Word
+            $section = $phpWord->addSection();
+            \PhpOffice\PhpWord\Shared\Html::addHtml($section, $htmlContent, false, false);
+
+            $filename = 'BAK_' . $ticket->ticket_id . '_' . time() . '.docx';
+            $path = 'documents/' . $filename;
+
+            $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+            $objWriter->save(storage_path('app/public/' . $path));
+
+            return $path;
+        }
+    }
+
+    public function generateCustomRKBDocument(Ticket $ticket, $htmlContent, $format = 'pdf')
+    {
+        // Similar to BAK method but for RKB
+        $ticket->load(['user', 'category', 'assignedTo', 'attachments' => function ($query) {
+            $query->where('use_in_report', true)->orderBy('report_order');
+        }]);
+
+        // Process the same way as BAK
+        if ($format == 'pdf') {
+            // Replace image URLs
+            preg_match_all('/<img.*?src="(.*?storage\/attachments\/.*?)".*?>/i', $htmlContent, $matches);
+
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $imageUrl) {
+                    $relativePath = str_replace(url('storage'), '', $imageUrl);
+                    $publicPath = public_path('storage' . $relativePath);
+                    $htmlContent = str_replace($imageUrl, $publicPath, $htmlContent);
+                }
+            }
+
+            // Generate PDF
+            $dompdf = new Dompdf();
+            $options = $dompdf->getOptions();
+            $options->set('isRemoteEnabled', true);
+            $dompdf->setOptions($options);
+
+            $dompdf->loadHtml($htmlContent);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $output = $dompdf->output();
+            $filename = 'RKB_' . $ticket->ticket_id . '_' . time() . '.pdf';
+            $path = 'documents/' . $filename;
+
+            Storage::put('public/' . $path, $output);
+
+            return $path;
+        } else {
+            // Generate DOCX
+            $phpWord = new PhpWord();
+            $section = $phpWord->addSection();
+            \PhpOffice\PhpWord\Shared\Html::addHtml($section, $htmlContent, false, false);
+
+            $filename = 'RKB_' . $ticket->ticket_id . '_' . time() . '.docx';
+            $path = 'documents/' . $filename;
+
+            $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+            $objWriter->save(storage_path('app/public/' . $path));
+
+            return $path;
+        }
+    }
+
 
     /**
      * Generate RKB (Rencana Kerja dan Biaya) document

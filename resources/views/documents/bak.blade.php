@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,70 +12,109 @@
             line-height: 1.6;
             font-size: 12pt;
         }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .header h1 {
             font-size: 16pt;
             text-decoration: underline;
             font-weight: bold;
         }
+
         .content {
             text-align: justify;
         }
+
         .subject {
             margin-bottom: 20px;
         }
+
         .footer {
             margin-top: 80px;
         }
+
         .signature-container {
             display: flex;
             justify-content: space-between;
             margin-top: 50px;
         }
+
         .signature {
             width: 45%;
         }
+
         .signature-line {
             border-bottom: 1px solid #000;
             margin-top: 50px;
             margin-bottom: 5px;
         }
+
         table.info-table {
             width: 100%;
             margin-bottom: 20px;
         }
+
         table.info-table td:first-child {
             width: 200px;
             vertical-align: top;
             padding-bottom: 10px;
         }
+
         table.info-table td:nth-child(2) {
             width: 20px;
             vertical-align: top;
             padding-bottom: 10px;
         }
+
         .logo {
             text-align: center;
             margin-bottom: 20px;
             font-style: italic;
             color: #666;
         }
+
         @page {
             margin-bottom: 200px;
         }
+
         .page-break {
             page-break-after: always;
         }
+
         .attachments-header {
             text-align: center;
             margin-top: 20px;
             margin-bottom: 20px;
         }
+
+        .attachments-content {
+            margin-top: 20px;
+        }
+
+        .image-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .attachment-image {
+            max-width: 80%;
+            margin: 0 auto;
+            border: 1px solid #ddd;
+            display: block;
+            page-break-inside: avoid;
+        }
+
+        .image-caption {
+            font-style: italic;
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>BERITA ACARA</h1>
@@ -82,19 +122,25 @@
 
     <div class="content">
         <div class="subject">
-            <p>Hal: Berita Acara Kerusakan {{
-                $ticket->category->name == 'Hardware Issue' ? 'Hardware' :
-                ($ticket->category->name == 'Network Issue' ? 'Jaringan' :
-                ($ticket->category->name == 'Software Issue' ? 'Software' : 'Perangkat'))
-            }}</p>
+            <p>Hal: Berita Acara Kerusakan
+                {{ $ticket->category->name == 'Hardware Issue'
+                    ? 'Hardware'
+                    : ($ticket->category->name == 'Network Issue'
+                        ? 'Jaringan'
+                        : ($ticket->category->name == 'Software Issue'
+                            ? 'Software'
+                            : 'Perangkat')) }}
+            </p>
 
             <p>Kepada Yth:<br>
-            {{ $ticket->report_recipient }} - {{ $ticket->report_recipient_position }}<br>
-            Ditempat</p>
+                {{ $ticket->report_recipient }} - {{ $ticket->report_recipient_position }}<br>
+                Ditempat</p>
 
             <p>Dengan hormat,</p>
 
-            <p>Kami dari departemen {{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Staff IT' }} melaporkan bahwa pada :</p>
+            <p>Kami dari departemen
+                {{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Staff IT' }}
+                melaporkan bahwa pada :</p>
 
             <table class="info-table">
                 <tr>
@@ -127,7 +173,8 @@
         </div>
 
         <div class="footer">
-            <p>{{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Sleman' }}, {{ now()->isoFormat('D MMMM YYYY') }}</p>
+            <p>{{ $ticket->assignedTo && $ticket->assignedTo->department ? $ticket->assignedTo->department->name : 'Sleman' }},
+                {{ now()->isoFormat('D MMMM YYYY') }}</p>
 
             <div class="signature-container">
                 <div class="signature">
@@ -156,13 +203,30 @@
     <div class="attachments-content">
         <p>Foto dan bukti pendukung:</p>
 
-        <div style="margin-top: 20px; font-style: italic; color: #666; text-align: center;">
-            [Bagian ini akan diisi dengan foto-foto dokumentasi setelah diekspor]
-        </div>
+        @php
+            $reportImages = $ticket->attachments->where('use_in_report', true)->sortBy('report_order');
+        @endphp
+
+        @if ($reportImages->count() > 0)
+            @foreach ($reportImages as $image)
+                @if ($image->isImage())
+                    <div class="image-container">
+                        <img src="{{ public_path('storage/' . $image->filepath) }}" class="attachment-image"
+                            alt="{{ $image->filename }}">
+                        <div class="image-caption">Lampiran: {{ $image->filename }}</div>
+                    </div>
+                @endif
+            @endforeach
+        @else
+            <div style="margin-top: 20px; font-style: italic; color: #666; text-align: center;">
+                [Tidak ada foto yang dilampirkan]
+            </div>
+        @endif
     </div>
 
     <div class="logo">
         [Footer Logo Perusahaan]
     </div>
 </body>
+
 </html>

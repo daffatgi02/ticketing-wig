@@ -13,5 +13,9 @@
         "postcss": "^8.1.14",
         "sass": "^1.56.1",
         "vite": "^4.0.0"
+    },
+    "dependencies": {
+        "@ckeditor/ckeditor5-build-decoupled-document": "^41.4.2",
+        "@ckeditor/ckeditor5-vue": "^7.3.0"
     }
 }

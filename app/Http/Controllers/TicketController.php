@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\User;
+use App\Models\DocTemplate;
 use App\Services\DocumentGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -111,6 +112,138 @@ class TicketController extends Controller
 
             return redirect()->route('tickets.show', $ticket)
                 ->with('warning', 'Ticket marked as needing external support, but failed to generate documents.');
+        }
+    }
+    public function previewDocument(Request $request, Ticket $ticket)
+    {
+        $request->validate([
+            'content' => 'required|string'
+        ]);
+
+        return response()->json([
+            'html' => $request->content
+        ]);
+    }
+    public function documentEditor(Ticket $ticket, $type)
+    {
+        $user = Auth::user();
+
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Only support staff can access document editor
+        if (!$user->isSupport() && !$user->isAdmin()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Validate document type
+        if (!in_array($type, ['bak', 'rkb'])) {
+            abort(404, 'Invalid document type.');
+        }
+
+        // Load template
+        $template = DocTemplate::where('type', $type)
+            ->where('is_default', true)
+            ->first();
+
+        // If no template exists, create a basic one
+        if (!$template) {
+            if ($type == 'bak') {
+                $content = view('templates.default.bak', compact('ticket'))->render();
+            } else {
+                $content = view('templates.default.rkb', compact('ticket'))->render();
+            }
+        } else {
+            $content = $template->content;
+
+            // Replace placeholders with ticket data
+            $content = str_replace('{ticket_id}', $ticket->ticket_id, $content);
+            $content = str_replace('{issue_detail}', $ticket->issue_detail ?? $ticket->description, $content);
+            $content = str_replace('{actions_taken}', $ticket->actions_taken ?? '', $content);
+            $content = str_replace('{report_recipient}', $ticket->report_recipient ?? 'Bpk Agus', $content);
+            $content = str_replace('{report_recipient_position}', $ticket->report_recipient_position ?? 'General Affair', $content);
+            $content = str_replace('{today_date}', now()->format('d F Y'), $content);
+            $content = str_replace('{incident_date}', $ticket->incident_date ? $ticket->incident_date->format('l, d F Y') : now()->format('l, d F Y'), $content);
+            $content = str_replace('{incident_time}', $ticket->incident_time ? $ticket->incident_time->format('H:i') : now()->format('H:i'), $content);
+            $content = str_replace('{created_by}', $user->name, $content);
+            $content = str_replace('{department}', $user->department ? $user->department->name : 'Staff IT', $content);
+        }
+
+        // Get document images
+        $reportImages = $ticket->attachments()
+            ->where('use_in_report', true)
+            ->orderBy('report_order')
+            ->get();
+
+        return view('tickets.document_editor', compact('ticket', 'type', 'content', 'reportImages'));
+    }
+
+    public function saveDocument(Request $request, Ticket $ticket)
+    {
+        $request->validate([
+            'type' => 'required|in:bak,rkb',
+            'content' => 'required|string'
+        ]);
+
+        $user = Auth::user();
+
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Save document content to session for later use
+        session([$request->type . '_document_' . $ticket->id => $request->content]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document saved successfully.'
+        ]);
+    }
+
+    public function publishDocument(Request $request, Ticket $ticket)
+    {
+        $request->validate([
+            'type' => 'required|in:bak,rkb',
+            'content' => 'required|string',
+            'format' => 'required|in:pdf,docx'
+        ]);
+
+        $user = Auth::user();
+
+        // Verify user is support staff assigned to this ticket or admin
+        if (!$user->isAdmin() && $ticket->assigned_to != $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            // Use custom content for document generation
+            $documentGenerator = new DocumentGenerator();
+            $documentPath = null;
+
+            if ($request->type == 'bak') {
+                $documentPath = $documentGenerator->generateCustomBAKDocument($ticket, $request->content, $request->format);
+                $ticket->update(['bak_document' => $documentPath]);
+            } else {
+                $documentPath = $documentGenerator->generateCustomRKBDocument($ticket, $request->content, $request->format);
+                $ticket->update(['rkb_document' => $documentPath]);
+            }
+
+            // Clear session content
+            session()->forget($request->type . '_document_' . $ticket->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document published successfully.',
+                'redirect' => route('tickets.show', $ticket)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to publish document: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -239,7 +372,10 @@ class TicketController extends Controller
             'report_recipient_position' => 'required|string|max:255',
             'additional_notes' => 'nullable|string',
             'document_format' => 'required|in:pdf,docx',
-            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:2048'
+            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:2048',
+            'report_images.*' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
+            'attachment_order.*' => 'nullable|integer|min:1|max:10',
+            'remove_attachments.*' => 'nullable|exists:ticket_attachments,id'
         ]);
 
         $user = Auth::user();
@@ -269,7 +405,61 @@ class TicketController extends Controller
                 'external_support_requested_at' => $ticket->external_support_requested_at ?? now()
             ]);
 
-            // Handle file uploads
+            // Process removed attachments
+            if ($request->has('remove_attachments')) {
+                foreach ($request->remove_attachments as $attachmentId) {
+                    $attachment = TicketAttachment::find($attachmentId);
+
+                    if ($attachment && $attachment->ticket_id == $ticket->id) {
+                        // Just set use_in_report to false, don't delete the file
+                        $attachment->update([
+                            'use_in_report' => false,
+                            'report_order' => null
+                        ]);
+                    }
+                }
+            }
+
+            // Update ordering for existing report attachments
+            if ($request->has('attachment_order')) {
+                foreach ($request->attachment_order as $attachmentId => $order) {
+                    $attachment = TicketAttachment::find($attachmentId);
+
+                    if ($attachment && $attachment->ticket_id == $ticket->id) {
+                        $attachment->update([
+                            'report_order' => $order
+                        ]);
+                    }
+                }
+            }
+
+            // Handle report image uploads
+            if ($request->hasFile('report_images')) {
+                // Count existing report images
+                $existingCount = $ticket->attachments()->where('use_in_report', true)->count();
+                $maxNewImages = 10 - $existingCount;
+                $newImages = array_slice($request->file('report_images'), 0, $maxNewImages);
+
+                // Get the highest current order
+                $highestOrder = $ticket->attachments()->where('use_in_report', true)->max('report_order') ?? 0;
+
+                foreach ($newImages as $index => $file) {
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $filepath = $file->storeAs('attachments', $filename, 'public');
+
+                    TicketAttachment::create([
+                        'ticket_id' => $ticket->id,
+                        'filename' => $file->getClientOriginalName(),
+                        'filepath' => $filepath,
+                        'filetype' => $file->getClientMimeType(),
+                        'filesize' => $file->getSize(),
+                        'use_in_report' => true,
+                        'report_order' => $highestOrder + $index + 1
+                    ]);
+                }
+            }
+
+            // Handle other file uploads
             if ($request->hasFile('attachments')) {
                 foreach ($request->file('attachments') as $file) {
                     $filename = time() . '_' . $file->getClientOriginalName();
@@ -280,17 +470,12 @@ class TicketController extends Controller
                         'filename' => $file->getClientOriginalName(),
                         'filepath' => $filepath,
                         'filetype' => $file->getClientMimeType(),
-                        'filesize' => $file->getSize()
+                        'filesize' => $file->getSize(),
+                        'use_in_report' => false
                     ]);
                 }
             }
 
-            // Generate BAK and RKB documents
-            $documentGenerator = new DocumentGenerator();
-            $format = $request->document_format;
-
-            $bakPath = $documentGenerator->generateBAKDocument($ticket, $format);
-            $rkbPath = $documentGenerator->generateRKBDocument($ticket, $format);
             // Generate BAK and RKB documents
             $documentGenerator = new DocumentGenerator();
             $format = $request->document_format;

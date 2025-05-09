@@ -15,7 +15,13 @@ class TicketAttachment extends Model
         'filename',
         'filepath',
         'filetype',
-        'filesize'
+        'filesize',
+        'use_in_report',
+        'report_order'
+    ];
+
+    protected $casts = [
+        'use_in_report' => 'boolean',
     ];
 
     public function ticket()
@@ -26,5 +32,10 @@ class TicketAttachment extends Model
     public function comment()
     {
         return $this->belongsTo(TicketComment::class);
+    }
+
+    public function isImage()
+    {
+        return in_array($this->filetype, ['image/jpeg', 'image/png', 'image/jpg', 'image/gif']);
     }
 }
